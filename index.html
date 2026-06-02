@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🎸 Fretboard – Circle of Fifths</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+    margin: 0;
+  }
+  label { margin-right: 8px; }
+  select { font-size: 14px; padding: 3px; }
+  #controls { margin-bottom: 15px; }
+  #fretboard {
+    background: #222;
+    border: 1px solid #444;
+    display: block;
+    margin-top: 10px;
+  }
+  #output {
+    margin-top:10px;
+    padding:8px 12px;
+    width:100%;
+    box-sizing:border-box;
+    background:#181818;
+    color:#eee;
+    min-height:24px;
+    font-family:monospace;
+    white-space:pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<h2>Fretboard – Circle of Fifths / Auto Sharps & Flats</h2>
+
+<div class="controls">
+  <label for="scaleRootSel">Scale Root:</label>
+  <select id="scaleRootSel"></select>
+
+  <label for="scaleTypeSel">Scale Type:</label>
+  <select id="scaleTypeSel"></select>
+  
+  <label>
+    <input type="checkbox" id="hideScale">
+    Hide
+  </label>
+  <span>|</span>
+  
+
+  <label for="chordRootSel" style="margin-left:20px;">Chord Root:</label>
+  <select id="chordRootSel"></select>
+
+  <label for="chordTypeSel">Chord Type:</label>
+  <select id="chordTypeSel"></select>
+ 
+  <label>
+    <input type="checkbox" id="hideChord">
+    Hide
+  </label>
+</div>
+
+<canvas id="fretboard" width="1030" height="320"></canvas>
+
+<div class="controls">
+  
+  <label>
+    <input type="checkbox" id="showScale">
+    Scale Root
+  </label>
+  
+  <select id="tuning"></select>
+  
+  <label>
+    <input type="checkbox" id="flipStrings">
+    Flip Strings
+  </label>
+  
+  <label>
+    <input type="checkbox" id="showCaged">
+    Show CAGED
+  </label>
+  <span>|</span>
+  <label>
+    <input type="checkbox" id="showVoice">
+    Show Voice
+  </label>
+  <select id="chordSel"></select>
+  <div id="output"></div>
+  <p>This project is aimed at creating a Fretboard class and separating the fretboard functionality from the UI</p>
+  
+</div>
+
+<script src="fretboard.js"></script>
+<script src="caged.js"></script>
+<script src="voicingGenerator.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
