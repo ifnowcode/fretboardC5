@@ -157,30 +157,23 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
   const results = [];
   
   console.log("Raw Voice count:", rawVoicings.length);
-
+  
+  // 3. Prune
   for (const voicing of rawVoicings) {
-    // 3. Prune
     // Contains root
     if (!containsRoot(voicing, tuning, root)) continue;
-    
     // Span constraint
     if (!withinSpan(voicing, maxSpan)) continue;
-
     // Enough notes
     if (!hasMinNotes(voicing, minNotes)) continue;
-    
     // Root must be lowest played note
     if (!rootIsBass(voicing, tuning, root)) continue;
-    
     // Low anchor (avoid only super high shapes)
     if (!hasLowAnchor(voicing, maxFret)) continue;
-    
     // Avoid trivial/silly shapes
     if (!notTooSparse(voicing)) continue;
-    
     // No skipped strings
     if (!noSkippedStrings(voicing)) continue;
-    
     // Must contain ALL chord tones at least once
     if (!containsAllChordTones(voicing, tuning, chordNotes)) continue;
 
@@ -210,7 +203,7 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
       if (!containsRoot(voicing, tuning, root)) continue;
       if (!rootIsBass(voicing, tuning, root)) continue;
       if (!withinSpan(voicing, maxSpan)) continue;
-      if (!hasMinNotes(voicing, 6)) continue;
+      if (!hasMinNotes(voicing, 2)) continue;
       if (!notTooSparse(voicing)) continue;
       if (!hasLowAnchor(voicing, maxFret)) continue;
       

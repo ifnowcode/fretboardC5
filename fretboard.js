@@ -38,7 +38,7 @@ function getExtension(filename) {
   return parts.length > 1 ? parts.pop() : '';
 }
 
-const FB_CHORD_INTERVALS = {
+const CHORD_INTERVALS = {
   "":     [0,4,7],          // Major
   "m":       [0,3,7],          // Minor
   "5":       [0,7],            // Power chord
@@ -104,7 +104,7 @@ const FB_CHORD_INTERVALS = {
   "aug7":    [0,4,8,10]
 };
 
-const FB_CHORD_INTERVAL_ORDER = [
+const CHORD_INTERVAL_ORDER = [
   // popular quick list
   "", "m", "5", "7", "m7", "maj7", "dim", "aug", "sus2", "sus4", "sus2sus4",
 
@@ -175,7 +175,7 @@ const FB_CHORD_INTERVAL_ORDER = [
   "5"
 ];
 
-const FB_MODES = {
+const MODES = {
   "Ionian (Major)"    : [0,2,4,5,7,9,11],
   "Dorian"            : [0,2,3,5,7,9,10],
   "Phrygian"          : [0,1,3,5,7,8,10],
@@ -192,7 +192,7 @@ const FB_MODES = {
   "Chromatic"         : [0,1,2,3,4,5,6,7,8,9,10,11],
 };
 
-const FB_TUNINGS = {
+const TUNINGS = {
   "Guitar Standard": ["E","A","D","G","B","E"],
   "Guitar Drop D": ["D","A","D","G","B","E"],
   "Guitar Open G": ["D","G","D","G","B","D"],
@@ -209,25 +209,87 @@ const FB_TUNINGS = {
 };
 
 // Internal canonical notes
-const FB_NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-const FB_NOTES_FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
+const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const NOTES_FLAT  = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 
 // Standard tuning (low to high)
-//const FB_TUNING = ["E","A","D","G","B","E"];
-//const FB_FRETS = 15;
+//const TUNING = ["E","A","D","G","B","E"];
+//const FRETS = 15;
+
+// Circle of Fifths for scale dropdown
+const CIRCLE_OF_FIFTHS = [
+  "C","G","D","A","E","B","F#","Gb","Db","Ab","Eb","Bb","F"
+];
+
+// Keys typically spelled with sharps vs flats
+const SHARP_KEYS = new Set(["C","G","D","A","E","B","F#","C#"]);
+const FLAT_KEYS  = new Set(["F","Bb","Eb","Ab","Db","Gb","Cb"]);
+
+KEY_TRIADS = [
+  ['C','Dm','Em','F','G','Am','Bdim  (x2343x)'],
+  ['G','Am','Bm','C','D','Em','F#dim (xx421x)'],
+  ['D','Em','F#m','G','A','Bm','C#dim (xxxo2o)'],
+  ['A','Bm','C#m','D','E','F#m','G#dim (xxx13o)'],
+  ['E','F#m','G#m','A','B','C#m','D#dim (xxx242)'],
+  ['B','C#m','D#m','E','F#','G#m','A#dim (x1232x)'],
+  ['F#','G#m','A#m','B','C#','D#m','E#dim (1231xx)'],
+  ['Gb','Abm','Bbm','Cb','Db','Ebm','Fdim  (xx31ox)'],
+  ['Db','Ebm','Fm','Gb','Ab','Bbm','Cdim  (x3454x)'],
+  ['Ab','Bbm','Cm','Db','Eb','Fm','Gdim  (xx532x)'],
+  ['Eb','Fm','Gm','Ab','Bb','Cm','Ddim  (xxo1x1)'],
+  ['Bb','Cm','Dm','Eb','F','Gm','Adim  (xo121x)'],
+  ['F','Gm','Am','Bb','C','Dm','Edim  (o12oxx)']
+];
+
+voicings_library = {
+  "C":  [[null, 3, 2, 0, 1, 0], [null, 3, 5, 5, 5, 3]],
+  "Dm": [[null, 0, 2, 3, 1], [null, 5, 7, 7, 6, 5] ],
+};
+
+// Intervals
+const SCALE_INTERVALS_SIMPLE = {
+  major:      [0,2,4,5,7,9,11],
+  minor:      [0,2,3,5,7,8,10],
+  pentMajor:  [0,2,4,7,9],
+  pentMinor:  [0,3,5,7,10]
+};
+
+const CHORD_INTERVALS_SIMPLE = {
+  maj:  [0,4,7],
+  min:  [0,3,7],
+  dom7: [0,4,7,10],
+  maj7: [0,4,7,11],
+  min7: [0,3,7,10]
+};
+
+// Auto sharps/flats from scale root
+function autoUseFlats(key) {
+  if (FLAT_KEYS.has(key)) return true;
+  if (SHARP_KEYS.has(key)) return false;
+  if (key.includes("b")) return true;
+  if (key.includes("#")) return false;
+  return false;
+}
+
+// Build notes from root + intervals (internal sharp names)
+function getNotes(root, intervals) {
+  const rootIndex = NOTES_SHARP.indexOf(root);
+  if (rootIndex === -1) return [];
+  return intervals.map(i => NOTES_SHARP[(rootIndex + i) % 12]);
+}
 
 // Utility: note at string/fret
 function noteAt(openNote, fret) {
-  const idx = FB_NOTES_SHARP.indexOf(openNote);
+  const idx = NOTES_SHARP.indexOf(openNote);
   if (idx === -1) return openNote;
-  return FB_NOTES_SHARP[(idx + fret) % 12];
+  return NOTES_SHARP[(idx + fret) % 12];
 }
 
 // Display mapping (useFlats decided by app)
-function fbDisplayNote(note, useFlats) {
-  const i = FB_NOTES_SHARP.indexOf(note);
+function DisplayNote(note, useFlats) {
+  const i = NOTES_SHARP.indexOf(note);
   if (i === -1) return note;
-  return useFlats ? FB_NOTES_FLAT[i] : FB_NOTES_SHARP[i];
+  return useFlats ? NOTES_FLAT[i] : NOTES_SHARP[i];
 }
 
 // Fretboard class
@@ -242,6 +304,7 @@ class Fretboard {
     this.showScale = true;
     this.showChord = true;
     this.stringsReversed = false;
+    this.jazzNotation = false; // toggle this from UI later
   }
 
   clear() {
@@ -250,6 +313,10 @@ class Fretboard {
   
   tuning(setup) {
     this.strings = setup.slice();
+  }
+  
+  notation(jazz) {
+    this.jazzNotation = jazz;
   }
   
   reverse(reverse) {
@@ -379,7 +446,7 @@ class Fretboard {
         const raw = noteAt(open, f);
         if (!noteSet.includes(raw)) continue;
 
-        const disp = fbDisplayNote(raw, useFlats);
+        const disp = DisplayNote(raw, useFlats);
 
         const x = 50 + f * 60 + 30;
         const y = h * (s + 1);
@@ -413,7 +480,11 @@ class Fretboard {
         ctx.font = "14px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(disp, x, y);
+        const label = this.jazzNotation
+          ? jazzDegree(rootNote, raw)
+          : disp;
+
+        ctx.fillText(label, x, y);
       }
     }
 
@@ -441,7 +512,7 @@ class Fretboard {
       if (fret == null) continue;
 
       const raw = noteAt(this.strings[s], fret);
-      const disp = fbDisplayNote(raw, useFlats);
+      const disp = DisplayNote(raw, useFlats);
 
       const x = 50 + fret * 60 + 30;
       const y = h * (s + 1);
@@ -466,7 +537,11 @@ class Fretboard {
       ctx.font = "14px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(disp, x, y);
+      const label = this.jazzNotation
+        ? jazzDegree(rootNote, raw)
+        : disp;
+
+      ctx.fillText(label, x, y);
     }
 
     ctx.globalAlpha = 1.0;
@@ -487,3 +562,27 @@ class Fretboard {
     }
   }
 }
+
+function jazzDegree(root, note) {
+  const rootIndex = NOTES_SHARP.indexOf(root);
+  const noteIndex = NOTES_SHARP.indexOf(note);
+  if (rootIndex === -1 || noteIndex === -1) return note;
+
+  const interval = (noteIndex - rootIndex + 12) % 12;
+
+  switch (interval) {
+    case 0:  return "1";
+    case 1:  return "b2";
+    case 2:  return "2";
+    case 3:  return "b3";
+    case 4:  return "3";
+    case 5:  return "4";
+    case 6:  return "#4";
+    case 7:  return "5";
+    case 8:  return "b6";
+    case 9:  return "6";
+    case 10: return "b7";
+    case 11: return "7";
+  }
+}
+
