@@ -1,6 +1,6 @@
 // app.js
 //let gentext = "";
-
+// Intervals
 
 // Populate dropdowns
 function populateScaleDropdown(sel) {
@@ -48,7 +48,8 @@ function populateVoiceDropdown(sel, voicings) {
 }
 
 let voicings =  null;
-function updateVoicings(strings) {
+function updateVoicings(tuning, reverse, usedDict=false) {
+  console.log("tuning:", tuning);
   //const scaleRoot = scaleRootSel.value;
   //console.log("Scale Root:", scaleRoot);
   //const scaleType = scaleTypeSel.value;
@@ -66,15 +67,21 @@ function updateVoicings(strings) {
 
   //const scaleNotes = getNotes(scaleRootSharp, scaleIntervals);
   const chordNotes = getNotes(chordRootSharp, chordIntervals);
-    
-  // Generate voicings
-  voicings = generateChordVoicings(chordRootSharp, chordNotes, strings, {
-    minFret: 0,
-    maxFret: 15,
-    maxSpan: 3,
-    minNotes: chordIntervals.length,
-    maxResults: 50
-  });
+   
+  if (usedDict) {
+    voicings = getDictionaryChords(chordRootSharp, chordNotes, tuning, reverse, {
+      chordType: chordType
+    });
+  } else {
+    // Generate voicings
+    voicings = generateChordVoicings(chordRootSharp, chordNotes, tuning, reverse, {
+      minFret: 0,
+      maxFret: 15,
+      maxSpan: 3,
+      minNotes: chordIntervals.length > 6 ? 6: chordIntervals.length,
+      maxResults: 50
+    });
+  }
   
   console.log("Found", voicings.length, " voicings");
   
@@ -119,6 +126,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const showVoice     = document.getElementById("showVoice");
   const chordVoiceSel = document.getElementById("chordVoiceSel");
   const jazzNotation  = document.getElementById("jazzNotation");
+  const useDict  = document.getElementById("useDict");
 
   populateScaleDropdown(scaleRootSel);
   populateChordDropdown(chordRootSel);
@@ -126,8 +134,24 @@ window.addEventListener("DOMContentLoaded", () => {
   scaleRootSel.value = "C";
   chordRootSel.value = "C";
   
+  // chord types
+  CHORD_INTERVAL_ORDER.forEach(c => {
+    chordTypeSel.add(new Option(c, c));
+  });
+
+  // scale modes
+  Object.keys(MODES).forEach(m =>
+    scaleTypeSel.add(new Option(m,m))
+  );
+
+  Object.keys(TUNINGS).forEach(t =>
+    tuningSel.add(new Option(t,t))
+  );
+  
+  console.log("TUNINGS", tuningSel.value, TUNINGS);
   const fb = new Fretboard(canvas, 15, TUNINGS[tuningSel.value]);
-  updateVoicings(fb.strings);
+  fb.reverseStrings(flipStrings.checked);
+  updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
 
   function update() {
     const scaleRoot = scaleRootSel.value;
@@ -149,7 +173,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const chordNotes = getNotes(chordRootSharp, chordIntervals);
     
     fb.clear();
-    fb.drawBoard(flipStrings.checked, { fretover: true });
+    fb.drawBoard(flipStrings.checked, { fretover: false });
     
     console.log("Intervals", chordIntervals, ", Notes", chordNotes, );
     
@@ -166,56 +190,63 @@ window.addEventListener("DOMContentLoaded", () => {
       });
     }
     
-    if (showVoice.checked) {
-      /*
+    if (!hideChord.checked) {
+      fb.plotNotes(chordNotes, showScale.checked ? "#ff0" : "#f60", useFlats, {
+        highlightRoot: !showScale.checked,
+        rootNote: chordRootSharp,
+        rootColor: "#fff",
+        rootRadius: 24,
+        alpha: showScale.checked ? 0.33 : 1.0,
+        border: true,
+      });
+    }
+    
+    if (false) { // test
+      
       const openC = [null, 3, 2, 0, 1, 0]; // x32010
-
+      //if (flipStrings.checked) openC.reverse();
       fb.plotVoicing(openC, "#f60", useFlats, {
         highlightRoot: true,
         rootNote: "C",
         rootColor: "#fff",
         rootRadius: 26
       });
-      */
-      
-      if (true && (voicings && voicings.length)) {
-        // Pick one to plot (e.g., first)
-        const v = voicings[chordVoiceSel.value];
-        //console.log("Chord Voice Select:", chordVoiceSel.value);
-        fb.plotVoicing(v.frets, getRandomColor(), useFlats, {
-          highlightRoot: true,
-          rootNote: chordRootSharp,
-          rootColor: "#fff",
-          rootRadius: 26
-        });
-      } else if (voicings) {
-        for (const v of voicings) {
+
+    } else {
+    
+      if (showVoice.checked) {
+        if (true && (voicings && voicings.length)) {
+          // Pick one to plot (e.g., first)
+          const v = voicings[chordVoiceSel.value];
+          
+          //console.log("Chord Voice Select:", chordVoiceSel.value);
+          const frets = flipStrings.checked
+            ? [...v.frets].reverse()
+            : v.frets;
+            
           fb.plotVoicing(v.frets, getRandomColor(), useFlats, {
             highlightRoot: true,
             rootNote: chordRootSharp,
             rootColor: "#fff",
-            rootRadius: 26,
-            alpha: 0.4,
+            rootRadius: 26
           });
+        } else if (voicings) {
+          for (const v of voicings) {
+            fb.plotVoicing(v.frets, getRandomColor(), useFlats, {
+              highlightRoot: true,
+              rootNote: chordRootSharp,
+              rootColor: "#fff",
+              rootRadius: 26,
+              alpha: 0.4,
+            });
+          }
         }
       }
-    } else {
-
-      if (!hideChord.checked) {
-        fb.plotNotes(chordNotes, showScale.checked ? "#ff0" : "#f60", useFlats, {
-          highlightRoot: !showScale.checked,
-          rootNote: chordRootSharp,
-          rootColor: "#fff",
-          rootRadius: 24,
-          alpha: showScale.checked ? 0.33 : 1.0,
-          border: true,
-        });
-      }
-      
     }
     
     if (showCaged.checked) {
-      const shapes = resolveCAGEDShapes(fb.strings, chordRootSharp, chordNotes, flipStrings.checked, fb.frets);
+      const shapes = resolveCAGEDShapes(TUNINGS[tuningSel.value], chordRootSharp, chordNotes, flipStrings.checked, fb.frets);
+      console.log("Shapes:", shapes);
       drawCAGEDOverlay(fb, shapes);
     }
     
@@ -233,20 +264,6 @@ window.addEventListener("DOMContentLoaded", () => {
    
   );
   }
-  
-  // chord types
-  CHORD_INTERVAL_ORDER.forEach(c => {
-    chordTypeSel.add(new Option(c, c));
-  });
-
-  // scale modes
-  Object.keys(MODES).forEach(m =>
-    scaleTypeSel.add(new Option(m,m))
-  );
-
-  Object.keys(TUNINGS).forEach(t =>
-    tuningSel.add(new Option(t,t))
-  );
 
   scaleRootSel.addEventListener("change", update);
   scaleTypeSel.addEventListener("change", update);
@@ -254,19 +271,27 @@ window.addEventListener("DOMContentLoaded", () => {
   //chordTypeSel.addEventListener("change", update);
   showScale.addEventListener("change", update);
   showCaged.addEventListener("change", update);
-  showVoice.addEventListener("change", update);
+  //showVoice.addEventListener("change", update);
   chordVoiceSel.addEventListener("change", update);
   hideScale.addEventListener("change", (e) => {
     //console.log("Hide Scale", hideScale.checked);
     fb.hideScale(hideScale.checked);
     update();
   });
+  showVoice.addEventListener("change", (e) => {
+    updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
+    update();
+  });
+  useDict.addEventListener("change", (e) => {
+    updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
+    update();
+  });
   chordRootSel.addEventListener("change", (e) => {
-    updateVoicings(fb.strings);
+    updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
     update();
   });
   chordTypeSel.addEventListener("change", (e) => {
-    updateVoicings(fb.strings);
+    updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
     update();
   });
   hideChord.addEventListener("change", (e) => {
@@ -275,15 +300,17 @@ window.addEventListener("DOMContentLoaded", () => {
     update();
   });
   flipStrings.addEventListener("change", (e) => {
-    fb.reverse(flipStrings.checked);
+    fb.reverseStrings(flipStrings.checked);
+    updateVoicings(TUNINGS[tuningSel.value], flipStrings.checked, useDict.checked);
     update();
   });
   tuningSel.addEventListener("change", (e) => {
-    fb.tuning(TUNINGS[tuningSel.value]);
+    console.log("TUNINGS[tuningSel.value]", TUNINGS[tuningSel.value]);
+    fb.setTuning(TUNINGS[tuningSel.value]);
     update();
   });
   jazzNotation.addEventListener("change", (e) => {
-    fb.notation(jazzNotation.checked);
+    fb.setNotation(jazzNotation.checked);
     update();
   });
   

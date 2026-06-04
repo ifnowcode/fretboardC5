@@ -22,9 +22,12 @@ function alignPatternToStrings(pattern, strings, flipped) {
 // ------------------------------------------------------------
 // Compute notes for a shape at a given offset
 // ------------------------------------------------------------
-function notesForShapeAtOffset(strings, shape, offset, flipped) {
+function notesForShapeAtOffset(tuning, shape, offset, flipped) {
   const frets = [];
   const notes = [];
+  let strings = tuning.slice(); // copy so original is not mutated
+  
+  if (flipped) strings.reverse(); // mutate copy
   
   const pattern = alignPatternToStrings(shape.pattern, strings, flipped);
 
@@ -98,7 +101,7 @@ function resolveCAGEDShapes(strings, chordRoot, chordNotes, flipped, maxFrets = 
 // ------------------------------------------------------------
 function drawCAGEDOverlay(fb, shapes, color="#ff0") {
   const ctx = fb.ctx;
-  const h = fb.height / (fb.strings.length + 1);
+  const h = fb.height / (fb.baseStrings.length + 1);
 
   for (const shape of shapes) {
     const { minFret, maxFret, frets, name } = shape;

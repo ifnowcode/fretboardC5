@@ -241,25 +241,9 @@ KEY_TRIADS = [
   ['F','Gm','Am','Bb','C','Dm','Edim  (o12oxx)']
 ];
 
-voicings_library = {
-  "C":  [[null, 3, 2, 0, 1, 0], [null, 3, 5, 5, 5, 3]],
-  "Dm": [[null, 0, 2, 3, 1], [null, 5, 7, 7, 6, 5] ],
-};
-
-// Intervals
-const SCALE_INTERVALS_SIMPLE = {
-  major:      [0,2,4,5,7,9,11],
-  minor:      [0,2,3,5,7,8,10],
-  pentMajor:  [0,2,4,7,9],
-  pentMinor:  [0,3,5,7,10]
-};
-
-const CHORD_INTERVALS_SIMPLE = {
-  maj:  [0,4,7],
-  min:  [0,3,7],
-  dom7: [0,4,7,10],
-  maj7: [0,4,7,11],
-  min7: [0,3,7,10]
+const voicings_library = {
+  "C":  [ [null, 3, 2, 0, 1, 0], [null, 3, 5, 5, 5, 3] ],
+  "Dm": [ [null, null, 0, 2, 3, 1], [null, 5, 7, 7, 6, 5] ],
 };
 
 // Auto sharps/flats from scale root
@@ -293,7 +277,7 @@ function DisplayNote(note, useFlats) {
 }
 
 // Fretboard class
-class Fretboard {
+class Fretboard_00 {
   constructor(canvas, frets=13, strings=["E","A","D","G","B","E"]) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
@@ -306,24 +290,24 @@ class Fretboard {
     this.stringsReversed = false;
     this.jazzNotation = false; // toggle this from UI later
   }
+  
+  reverseStrings(reverse) {
+    this.stringsReversed = reverse;
+    // this is counting on consistent state unless I save a baseline strings
+    // I.e. if somehow the check box and string state got backwards it stay that way until it messed up again. Note: String is initially forward.
+    this.strings.reverse();
+  }
 
   clear() {
     this.ctx.clearRect(0, 0, this.width, this.height);
   }
   
-  tuning(setup) {
+  setTuning(setup) {
     this.strings = setup.slice();
   }
   
-  notation(jazz) {
+  setNotation(jazz) {
     this.jazzNotation = jazz;
-  }
-  
-  reverse(reverse) {
-    this.stringsReversed = reverse;
-    // this is counting on consitent state unless I save a baseline strings
-    // I.e. if somehow the check box and string state got backwards it stay that way until it messed up again. Note: String is initially forward.
-    this.strings.reverse();
   }
   
   hideScale(hide) {
@@ -492,7 +476,8 @@ class Fretboard {
   }
   
   // Plot a fixed chord voicing like [null,3,2,0,1,0]
-  plotVoicing = function(voicing, color, useFlats, meta = {}) {
+  plotVoicing(voicing, color, useFlats, meta = {}) {
+    if (this.stringsReversed) voicing.reverse();
     const ctx = this.ctx;
     const h = this.height / (this.strings.length + 1);
 
@@ -559,6 +544,310 @@ class Fretboard {
     // Chord on top (stronger)
     if (chordNotes && chordNotes.length) {
       if (this.showChord) this.plotNotes(chordNotes, "#f60", useFlats, 0.7, 14);
+    }
+  }
+}
+
+// Fretboard class
+class Fretboard {
+  constructor(canvas, frets = 13, strings = ["E","A","D","G","B","E"]) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+    this.width = canvas.width;
+    this.height = canvas.height;
+
+    // Canonical tuning: always low → high, never mutated
+    this.baseStrings = strings.slice();
+
+    this.frets = frets;
+    this.showScale = true;
+    this.showChord = true;
+    this.stringsReversed = false;
+    this.jazzNotation = false;
+  }
+
+  // Visual flip only; does not mutate tuning
+  reverseStrings(reverse) {
+    this.stringsReversed = reverse;
+  }
+
+  // Change tuning (still stored low → high)
+  setTuning(setup) {
+    this.baseStrings = setup.slice();
+  }
+
+  setNotation(jazz) {
+    this.jazzNotation = jazz;
+  }
+
+  hideScale(hide) {
+    this.showScale = !hide;
+  }
+
+  hideChord(hide) {
+    this.showChord = !hide;
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, this.width, this.height);
+  }
+
+  // Map logical string index (0 = low) to visual index
+  mapStringIndex(index) {
+    if (!this.stringsReversed) return index;
+    return this.baseStrings.length - 1 - index;
+  }
+
+  // Get the open note for a logical string index
+  getStringAt(index) {
+    return this.baseStrings[index];
+  }
+
+  drawBoard(reverseVisual, meta = {}) {
+    //console.log("reverseVisual", reverseVisual);
+    const ctx = this.ctx;
+    const stringCount = this.baseStrings.length;
+    const h = this.height / (stringCount + 1);
+
+    const { fretover = false } = meta;
+
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 3;
+
+    // Frets (vertical)
+    for (let f = 0; f <= this.frets; f++) {
+      const x = 50 + f * 60;
+      ctx.beginPath();
+      if (fretover) {
+        ctx.moveTo(x, h * 0.5);
+        ctx.lineTo(x, h * (stringCount + 0.5));
+      } else {
+        ctx.moveTo(x, h);
+        ctx.lineTo(x, h * stringCount);
+      }
+      ctx.stroke();
+
+      if (stringCount >= 4) {
+        const markerFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+        if (markerFrets.includes(f)) {
+          const dotX = x + 35;
+          const midY = (h + h * stringCount) / 2;
+
+          ctx.fillStyle = "#000";
+
+          if (f === 12 || f === 24) {
+            ctx.beginPath();
+            ctx.arc(dotX, midY - h * 1, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(dotX, midY + h * 1, 12, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(dotX, midY, 12, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // Nut
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    if (fretover) {
+      ctx.moveTo(50 + 60, h * 0.5);
+      ctx.lineTo(50 + 60, h * (stringCount + 0.5));
+    } else {
+      ctx.moveTo(50 + 60, h);
+      ctx.lineTo(50 + 60, h * stringCount);
+    }
+    ctx.stroke();
+
+    // Strings (horizontal, visual order via mapStringIndex)
+    /*
+    let lineWidth = this.stringsReversed ? 1 : 6;
+    console.log("stringsReversed", this.stringsReversed)
+    for (let s = 0; s < stringCount; s++) {
+      const visualIndex = this.mapStringIndex(s);
+      const y = h * (visualIndex + 1);
+
+      ctx.strokeStyle = lineWidth > 2 ? "#a70" : "#555";
+      ctx.lineWidth = lineWidth;
+      console.log("lineWidth", lineWidth, visualIndex, ctx.strokeStyle)
+
+      ctx.beginPath();
+      ctx.moveTo(50, y);
+      ctx.lineTo(this.width - 20, y);
+      ctx.stroke();
+
+      // thickness progression
+      if (this.stringsReversed) {
+        lineWidth++;   // thin → thick as you go down
+      } else {
+        lineWidth--;   // thick → thin as you go up
+      }
+    }
+    */
+    
+    // Strings (horizontal)
+    let lineWidth = this.stringsReversed ? 1 : 6;
+    for (let s = 0; s < stringCount; s++) {
+      const y = h * (s + 1);
+      
+      if (lineWidth > 2 ) {
+        ctx.strokeStyle="#a70";
+      } else {
+        ctx.strokeStyle="#555";
+      }
+      //console.log("Line width:", ctx.lineWidth, lineWidth);
+      ctx.lineWidth = this.stringsReversed ? lineWidth++ : lineWidth--;
+      
+      ctx.beginPath();
+      ctx.moveTo(50, y);
+      ctx.lineTo(this.width - 20, y);
+      ctx.stroke();
+    }
+
+
+  }
+
+  // Plot a set of notes (scale or chord)
+  plotNotes(noteSet, color, useFlats, meta = {}) {
+    const ctx = this.ctx;
+    const stringCount = this.baseStrings.length;
+    const h = this.height / (stringCount + 1);
+
+    const {
+      alpha = 0.7,
+      radius = 13,
+      border = false,
+      highlightRoot = false,
+      rootNote = null,
+      rootColor = "#fff",
+      rootRadius = 22,
+      rootLineWidth = 3
+    } = meta;
+
+    ctx.globalAlpha = alpha;
+
+    for (let s = 0; s < stringCount; s++) {
+      const open = this.getStringAt(s);
+      const visualIndex = this.mapStringIndex(s);
+
+      for (let f = 0; f <= this.frets; f++) {
+        const raw = noteAt(open, f);
+        if (!noteSet.includes(raw)) continue;
+
+        const disp = DisplayNote(raw, useFlats);
+
+        const x = 50 + f * 60 + 30;
+        const y = h * (visualIndex + 1);
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (border) {
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        if (highlightRoot && raw === rootNote) {
+          ctx.strokeStyle = rootColor;
+          ctx.lineWidth = rootLineWidth;
+          ctx.beginPath();
+          ctx.arc(x, y, rootRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#000";
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const label = this.jazzNotation
+          ? jazzDegree(rootNote, raw)
+          : disp;
+
+        ctx.fillText(label, x, y);
+      }
+    }
+
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Plot a fixed chord voicing like [null,3,2,0,1,0] (always low→high)
+  plotVoicing(voicing, color, useFlats, meta = {}) {
+    const ctx = this.ctx;
+    const stringCount = this.baseStrings.length;
+    const h = this.height / (stringCount + 1);
+
+    const {
+      highlightRoot = false,
+      rootNote = null,
+      rootColor = "#fff",
+      rootRadius = 22,
+      alpha = 0.95,
+      radius = 14
+    } = meta;
+
+    ctx.globalAlpha = alpha;
+
+    for (let s = 0; s < stringCount; s++) {
+      const fret = voicing[s];
+      if (fret == null) continue;
+
+      const open = this.getStringAt(s);
+      const raw = noteAt(open, fret);
+      const disp = DisplayNote(raw, useFlats);
+
+      const visualIndex = this.mapStringIndex(s);
+      const x = 50 + fret * 60 + 30;
+      const y = h * (visualIndex + 1);
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (highlightRoot && raw === rootNote) {
+        ctx.strokeStyle = rootColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, rootRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#000";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const label = this.jazzNotation
+        ? jazzDegree(rootNote, raw)
+        : disp;
+
+      ctx.fillText(label, x, y);
+    }
+
+    ctx.globalAlpha = 1.0;
+  }
+
+  // Example draw wrapper (you’re mostly using update() instead)
+  draw(scaleNotes, chordNotes, useFlats) {
+    this.clear();
+    this.drawBoard(this.stringsReversed);
+
+    if (scaleNotes && scaleNotes.length && this.showScale) {
+      this.plotNotes(scaleNotes, "#3af", useFlats, { alpha: 0.6, radius: 11 });
+    }
+
+    if (chordNotes && chordNotes.length && this.showChord) {
+      this.plotNotes(chordNotes, "#f60", useFlats, { alpha: 0.7, radius: 14 });
     }
   }
 }

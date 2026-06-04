@@ -12,9 +12,9 @@
 // Utility: build all candidate frets per string for a chord
 // Each entry: [null, ...fretsThatAreChordTones]
 // ------------------------------------------------------------
-function buildStringOptions(tuning, chordNotes, minFret, maxFret) {
+function buildStringOptions(tuning, chordNotes, minFret, maxFret, reverse) {
   const options = [];
-
+  
   for (let s = 0; s < tuning.length; s++) {
     const open = tuning[s];
     const frets = [null]; // null = mute
@@ -138,9 +138,8 @@ function containsAllChordTones(voicing, tuning, chordNotes) {
 // ------------------------------------------------------------
 // Main generator (export)
 // ------------------------------------------------------------
-function generateChordVoicings(root, chordNotes, strings, options = {}) {
+function generateChordVoicings(root, chordNotes, tuning, reverse, options = {}) {
   const {
-    tuning = strings,
     minFret = 0,
     maxFret = 12,
     maxSpan = 4,
@@ -149,15 +148,16 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
   } = options;
 
   // 1. Build candidate frets per string
-  const stringOptions = buildStringOptions(tuning, chordNotes, minFret, maxFret);
+  const stringOptions = buildStringOptions(tuning, chordNotes, minFret, maxFret, reverse);
+  console.log("stringOptions", stringOptions);
 
   // 2. Cartesian product → all raw voicings
   const rawVoicings = cartesianProduct(stringOptions);
 
   const results = [];
-  
+
   console.log("Raw Voice count:", rawVoicings.length);
-  
+
   // 3. Prune
   for (const voicing of rawVoicings) {
     // Contains root
@@ -176,7 +176,7 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
     if (!noSkippedStrings(voicing)) continue;
     // Must contain ALL chord tones at least once
     if (!containsAllChordTones(voicing, tuning, chordNotes)) continue;
-
+    //continue;
     // 4. Build metadata
     const used = voicing.filter(f => f !== null);
     const minF = Math.min(...used);
@@ -185,7 +185,7 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
     const notes = voicing.map((f, s) =>
       f == null ? null : noteAt(tuning[s], f)
     );
-
+    
     results.push({
       frets: voicing,
       notes,
@@ -195,18 +195,18 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
 
     if (results.length >= maxResults) break;
   }
-  
+
   // of we didn't find anything relax the rules and try again
   if (!results.length) {
     console.log("Found no qualifying voices, lowering the bar...");
     for (const voicing of rawVoicings) {
       if (!containsRoot(voicing, tuning, root)) continue;
-      if (!rootIsBass(voicing, tuning, root)) continue;
+      //if (!rootIsBass(voicing, tuning, root)) continue;
       if (!withinSpan(voicing, maxSpan)) continue;
       if (!hasMinNotes(voicing, 2)) continue;
       if (!notTooSparse(voicing)) continue;
-      if (!hasLowAnchor(voicing, maxFret)) continue;
-      
+      //if (!hasLowAnchor(voicing, maxFret)) continue;
+
       // 4. Build metadata
       const used = voicing.filter(f => f !== null);
       const minF = Math.min(...used);
@@ -215,7 +215,7 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
       const notes = voicing.map((f, s) =>
         f == null ? null : noteAt(tuning[s], f)
       );
-    
+
       results.push({
         frets: voicing,
         notes,
@@ -225,7 +225,7 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
 
       if (results.length >= maxResults) break;
     }
-    
+
   }
 
   // 5. Sort by:
@@ -237,6 +237,6 @@ function generateChordVoicings(root, chordNotes, strings, options = {}) {
     const spanB = b.maxFret - b.minFret;
     return spanA - spanB;
   });
-
+  
   return results;
 }
