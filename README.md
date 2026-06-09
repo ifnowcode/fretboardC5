@@ -1,6 +1,6 @@
 # 🎸 Fretboard Visualizer
 
-(https://ifnowcode.github.io/fretboardC5/)[https://ifnowcode.github.io/fretboardC5/]
+[https://ifnowcode.github.io/fretboardC5/](https://ifnowcode.github.io/fretboardC5/)
 
 A fast, deterministic, browser‑based fretboard engine for exploring **scales, chords, tunings, intervals, enharmonics, and generated progressions** across multiple stringed instruments based on the Circle of Fifths. Built with clean, modular JavaScript and a canvas‑based rendering pipeline.
 
