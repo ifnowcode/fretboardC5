@@ -1,0 +1,5 @@
+# not including package because it's about linting which I'm only using locally for experimentation
+node_modules/
+eslint.config.mjs
+package-lock.json
+package.json

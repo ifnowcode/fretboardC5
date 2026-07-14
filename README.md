@@ -66,7 +66,7 @@ Choose any chord over any scale (e.g., D major over C Ionian).
 #### GenSong
 
 js
-```
+```javascript
 const g = new GenSong();
 g.random();          // random key
 g.inKeyOf("Db", 8);  // fixed key
